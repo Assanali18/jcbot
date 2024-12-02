@@ -24,6 +24,7 @@ REFRESH_TOKEN = os.getenv("REFRESH_TOKEN")
 
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID"))
 
 
 TEST_RECIPIENTS = os.getenv("TEST_RECIPIENTS").split(",")
@@ -137,14 +138,27 @@ def send_email(file_path, recipients):
     return response.status_code, response.text
 
 
+async def is_user_allowed(message: types.Message):
+    if message.from_user.id != ALLOWED_USER_ID:
+        await message.answer("У вас нет доступа к этому боту.")
+        return False
+    return True
+
+
 @dp.message(Command("start"))
 async def start(message: types.Message, state: FSMContext):
+    if not await is_user_allowed(message):
+        return
+
     await message.answer("Привет! Введите дату выезда (например, 15 октября):")
     await state.set_state(Form.departure_date)
 
 
 @dp.message(Form.departure_date)
 async def departure_date(message: types.Message, state: FSMContext):
+    if not await is_user_allowed(message):
+        return
+
     await state.update_data(departure_date=message.text)
     await message.answer("Введите дату заезда (например, 20 октября):")
     await state.set_state(Form.arrival_date)
@@ -152,6 +166,9 @@ async def departure_date(message: types.Message, state: FSMContext):
 
 @dp.message(Form.arrival_date)
 async def arrival_date(message: types.Message, state: FSMContext):
+    if not await is_user_allowed(message):
+        return
+
     await state.update_data(arrival_date=message.text)
     data = await state.get_data()
     departure_date = data["departure_date"]
@@ -179,6 +196,9 @@ async def arrival_date(message: types.Message, state: FSMContext):
 
 @dp.message(Command("mode"))
 async def change_mode(message: types.Message):
+    if not await is_user_allowed(message):
+        return
+
     global current_mode
     current_mode = "prod" if current_mode == "test" else "test"
     await message.answer(f"Режим изменен на {current_mode.capitalize()}.")
