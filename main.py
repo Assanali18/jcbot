@@ -150,7 +150,7 @@ async def start(message: types.Message, state: FSMContext):
     if not await is_user_allowed(message):
         return
 
-    await message.answer("Привет! Введите дату выезда (например, 15 октября):")
+    await message.answer(f"Привет! Сейчас вы на {current_mode} режиме.Введите дату выезда (например, 15 октября):")
     await state.set_state(Form.departure_date)
 
 
