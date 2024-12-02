@@ -1,4 +1,4 @@
 .env
 /venv
-*.docx
+filled_document.docx
 .idea
