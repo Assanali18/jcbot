@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -145,14 +145,55 @@ async def is_user_allowed(message: types.Message):
     return True
 
 
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+# Клавиатура для выбора режима
+def mode_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Тестовый режим")],
+            [KeyboardButton(text="Продакшен режим")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+class ModeState(StatesGroup):
+    mode_selection = State()
+
 @dp.message(Command("start"))
 async def start(message: types.Message, state: FSMContext):
     if not await is_user_allowed(message):
         return
 
-    await message.answer(f"Привет! Сейчас вы на {current_mode} режиме.Введите дату выезда (например, 15 октября):")
-    await state.set_state(Form.departure_date)
 
+    await message.answer(
+        "Привет! Пожалуйста, выберите режим, в котором хотите работать:",
+        reply_markup=mode_keyboard()
+    )
+    await state.set_state(ModeState.mode_selection)
+
+@dp.message(ModeState.mode_selection)
+async def select_mode(message: types.Message, state: FSMContext):
+    global current_mode
+
+
+    if message.text == "Тестовый режим":
+        current_mode = "test"
+    elif message.text == "Продакшен режим":
+        current_mode = "prod"
+    else:
+        await message.answer("Пожалуйста, выберите режим с клавиатуры.")
+        return
+
+    await message.answer(
+        f"Режим изменен на {current_mode.capitalize()}.\nВведите дату выезда (например, 15 октября):",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+    await state.set_state(Form.departure_date)
 
 @dp.message(Form.departure_date)
 async def departure_date(message: types.Message, state: FSMContext):
@@ -162,7 +203,6 @@ async def departure_date(message: types.Message, state: FSMContext):
     await state.update_data(departure_date=message.text)
     await message.answer("Введите дату заезда (например, 20 октября):")
     await state.set_state(Form.arrival_date)
-
 
 @dp.message(Form.arrival_date)
 async def arrival_date(message: types.Message, state: FSMContext):
@@ -194,16 +234,6 @@ async def arrival_date(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-@dp.message(Command("mode"), ~StateFilter())
-async def change_mode(message: types.Message, state: FSMContext):
-    if not await is_user_allowed(message):
-        return
-
-    global current_mode
-    current_mode = "prod" if current_mode == "test" else "test"
-    await message.answer(f"Режим изменен на {current_mode.capitalize()}.")
-
-    await state.clear()
 
 
 async def main():
