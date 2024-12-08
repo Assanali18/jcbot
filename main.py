@@ -194,14 +194,16 @@ async def arrival_date(message: types.Message, state: FSMContext):
     await state.clear()
 
 
-@dp.message(Command("mode"))
-async def change_mode(message: types.Message):
+@dp.message(Command("mode"), state=None)
+async def change_mode(message: types.Message, state: FSMContext):
     if not await is_user_allowed(message):
         return
 
     global current_mode
     current_mode = "prod" if current_mode == "test" else "test"
     await message.answer(f"Режим изменен на {current_mode.capitalize()}.")
+
+    await state.clear()
 
 
 async def main():
